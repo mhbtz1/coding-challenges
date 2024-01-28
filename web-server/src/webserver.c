@@ -10,27 +10,22 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include "http.h"
 
 #define PORT "3490"  // the port users will be connecting to
-
 #define BACKLOG 10	 // how many pending connections queue will hold
+#define MAXSIZE 100
 
-void sigchld_handler(int s)
-{
+void sigchld_handler(int s){
 	(void)s; // quiet unused variable warning
-
 	// waitpid() might overwrite errno, so we save and restore it:
 	int saved_errno = errno;
-
 	while(waitpid(-1, NULL, WNOHANG) > 0);
-
 	errno = saved_errno;
 }
 
-
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
+void *get_in_addr(struct sockaddr *sa){
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
@@ -38,8 +33,7 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(void)
-{
+int main(void){
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
@@ -48,6 +42,7 @@ int main(void)
 	int yes=1;
 	char s[INET6_ADDRSTRLEN];
 	int rv;
+  char buf[MAXSIZE];
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -81,7 +76,6 @@ int main(void)
 
 		break;
 	}
-
 	freeaddrinfo(servinfo); // all done with this structure
 
 	if (p == NULL)  {
@@ -105,25 +99,41 @@ int main(void)
 	printf("server: waiting for connections...\n");
 
 	while(1) {  // main accept() loop
-		sin_size = sizeof their_addr;
+		sin_size = sizeof(their_addr);
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
 		if (new_fd == -1) {
 			perror("accept");
-			continue;
+			break;
 		}
 
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
 		printf("server: got connection from %s\n", s);
-
+    
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
-			if (send(new_fd, "Hello, world!", 13, 0) == -1)
-				perror("send");
-			close(new_fd);
-			exit(0);
+			
+
+      ssize_t numbytes = recv(new_fd, buf, MAXSIZE, 0);
+      if (numbytes == -1)
+				perror("recv");
+      buf[numbytes] = '\0';
+      char* requestLine = strtok(buf, "\r\n");
+      char* headers = strtok(NULL, "\r\n\r\n");
+      char* requestBody = strtok(NULL, "");
+
+      printf("request line: %s\n", requestLine);
+			printf("headers: %s\n", headers);
+      printf("request body: %s\n", requestBody);
+      
+      char* response = serve_http_request(requestLine, headers, requestBody);
+           
+      //const char* response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello, World!";
+      send(new_fd, response, strlen(response), 0);
+      printf("Sent: %s\n", response);
 		}
+
 		close(new_fd);  // parent doesn't need this
 	}
 
