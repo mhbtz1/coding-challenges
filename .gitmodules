@@ -1,0 +1,11 @@
+[submodule "lb"]
+    path = lb
+    url = https://github.com/mhbtz1/lb.git
+
+[submodule "tinyurl"]
+    path = tinyurl
+    url = https://github.com/mhbtz1/tinyurl.git
+
+[submodule "redis-server"]
+    path = redis-server
+    url = https://github.com/mhbtz1/redis-server.git
