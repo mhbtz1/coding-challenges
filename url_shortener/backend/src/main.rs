@@ -1,6 +1,8 @@
 use actix::Actor;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_cors::Cors;
 use serde::{Deserialize, Serialize};
+
 
 use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
@@ -9,6 +11,8 @@ use base64::{engine::general_purpose, Engine as _};
 use std::{io::{Read, Write}, sync::Arc};
 use flexi_logger::{Duplicate, Logger, FileSpec};
 use log::*;
+
+use db::{spawn_client};
 
 
 const BASE_TINY_URL: &'static str = "http://tiny.co";
@@ -99,7 +103,7 @@ async fn tinify(web::Form(form): web::Form<TinifyPayload>) -> impl Responder {
     info!("encoded_base: {:?}", encoded_base);
 
     let final_tinified = if encoded_path.len() > 0 {
-        format!("http://{}.co/{:?}", encoded_base, encoded_path)
+        format!("http://{}.co/{}", encoded_base, encoded_path)
     } else {
         format!("http://{}.co", encoded_base)
     };
@@ -144,7 +148,7 @@ async fn main() -> std::io::Result<()> {
 
 
     HttpServer::new(|| {
-        App::new()
+        App::new().wrap(Cors::default().allow_any_origin().allow_any_method().allow_any_header())
         .service(tget)
         .service(tinify)
         .service(detinify)

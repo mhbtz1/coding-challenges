@@ -12,3 +12,6 @@ base64 = "0.22.1"
 serde = { version = "1.0.219", features = ["derive"]}
 flexi_logger = "0.31.2"
 log = "0.4.27"
+actix-cors = "0.7.1"
+tokio-postgres = "0.7.13"
+db = { path = "./src/db" }
