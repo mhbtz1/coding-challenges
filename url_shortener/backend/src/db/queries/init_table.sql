@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS $1 (
+    url VARCHAR
+    tinified_url VARCHAR PRIMARY KEY
+) 
