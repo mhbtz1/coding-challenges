@@ -12,7 +12,7 @@ use std::{io::{Read, Write}, sync::Arc};
 use flexi_logger::{Duplicate, Logger, FileSpec};
 use log::*;
 
-use db::{spawn_client};
+use db::{spawn_client, create_table, add_url_mapping};
 
 
 const BASE_TINY_URL: &'static str = "http://tiny.co";
